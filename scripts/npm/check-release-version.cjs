@@ -18,7 +18,7 @@ function main() {
     );
   }
 
-  const refName = process.env.GITHUB_REF_NAME;
+  const refName = process.env.GRF_RELEASE_REF_NAME ?? process.env.GITHUB_REF_NAME;
   const expectedTag = `v${packageVersion}`;
 
   if (refName && refName !== expectedTag) {

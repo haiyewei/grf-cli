@@ -20,7 +20,7 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && startsWith(github.event.workflow_run.head_branch, 'v') }}
     runs-on: ubuntu-22.04
     env:
-      GITHUB_REF_NAME: ${{ github.event.workflow_run.head_branch }}
+      GRF_RELEASE_REF_NAME: ${{ github.event.workflow_run.head_branch }}
     steps:
       - name: Checkout tagged release
         uses: actions/checkout@v4
