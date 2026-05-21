@@ -26,15 +26,28 @@ impl ParsedGitUrl {
 }
 
 pub fn looks_like_git_url(value: &str) -> bool {
-    value.starts_with("http://")
+    normalize_git_url(value).is_some()
+}
+
+pub fn normalize_git_url(value: &str) -> Option<String> {
+    if value.starts_with("http://")
         || value.starts_with("https://")
         || value.starts_with("git@")
         || value.starts_with("file://")
         || value.starts_with("git://")
         || Path::new(value).exists()
+    {
+        return Some(value.to_string());
+    }
+
+    normalize_hosted_repo_shorthand(value)
 }
 
 pub fn parse_git_url(raw: &str) -> Result<ParsedGitUrl> {
+    if let Some(normalized) = normalize_hosted_repo_shorthand(raw) {
+        return parse_http_like_url(&normalized);
+    }
+
     if raw.starts_with("http://") || raw.starts_with("https://") {
         return parse_http_url(raw);
     }
@@ -174,6 +187,47 @@ fn trim_repo_suffix(value: &str) -> String {
     value.strip_suffix(".git").unwrap_or(value).to_string()
 }
 
+fn normalize_hosted_repo_shorthand(raw: &str) -> Option<String> {
+    let raw = raw.trim().trim_end_matches('/');
+    let segments = raw
+        .split('/')
+        .filter(|segment| !segment.is_empty())
+        .collect::<Vec<_>>();
+
+    if segments.len() != 3 {
+        return None;
+    }
+
+    let host = segments[0];
+    if !looks_like_remote_host(host) {
+        return None;
+    }
+
+    let owner = segments[1];
+    let repo = trim_repo_suffix(segments[2]);
+    if owner.is_empty() || repo.is_empty() {
+        return None;
+    }
+
+    Some(format!("https://{host}/{owner}/{repo}.git"))
+}
+
+fn looks_like_remote_host(host: &str) -> bool {
+    if host == "localhost" || host.contains('.') {
+        return true;
+    }
+
+    if host.contains(':') {
+        let bytes = host.as_bytes();
+        if bytes.len() == 2 && bytes[1] == b':' && bytes[0].is_ascii_alphabetic() {
+            return false;
+        }
+        return true;
+    }
+
+    false
+}
+
 fn sanitize_path_label(value: &str) -> String {
     let mut sanitized = String::with_capacity(value.len());
     let mut last_was_underscore = false;
@@ -198,7 +252,7 @@ fn sanitize_path_label(value: &str) -> String {
 mod tests {
     use tempfile::TempDir;
 
-    use super::{looks_like_git_url, parse_git_url};
+    use super::{looks_like_git_url, normalize_git_url, parse_git_url};
 
     #[test]
     fn parses_https_url() {
@@ -219,10 +273,23 @@ mod tests {
     }
 
     #[test]
+    fn parses_hosted_repo_shorthand() {
+        let parsed = parse_git_url("github.com/openai/codex").unwrap();
+        assert_eq!(parsed.canonical_name(), "github.com/openai/codex");
+    }
+
+    #[test]
     fn detects_git_url() {
         assert!(looks_like_git_url("https://github.com/openai/codex.git"));
         assert!(looks_like_git_url("git@github.com:openai/codex.git"));
+        assert!(looks_like_git_url("github.com/openai/codex"));
         assert!(!looks_like_git_url("codex"));
+    }
+
+    #[test]
+    fn normalizes_hosted_repo_shorthand() {
+        let normalized = normalize_git_url("github.com/openai/codex").unwrap();
+        assert_eq!(normalized, "https://github.com/openai/codex.git");
     }
 
     #[test]

@@ -1,6 +1,6 @@
 [package]
 name = "grf"
-version = "2.0.1"
+version = "2.0.2"
 edition = "2024"
 description = "Rust-native CLI for managing Git reference repositories."
 license = "MIT"

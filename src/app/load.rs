@@ -1,11 +1,11 @@
 use camino::Utf8Path;
 use time::OffsetDateTime;
 
-use crate::app::add::add_repository;
+use crate::app::add::{add_repository, build_repo_storage_path};
 use crate::cli::args::LoadArgs;
 use crate::domain::error::{GrfError, Result};
-use crate::domain::git_url::looks_like_git_url;
-use crate::domain::model::LoadingEntry;
+use crate::domain::git_url::{normalize_git_url, parse_git_url};
+use crate::domain::model::{ConfigFile, LoadingEntry, RepoRecord};
 use crate::infra::{
     fs, git, gitignore,
     paths::{self, GrfPaths},
@@ -23,22 +23,14 @@ pub fn run(args: LoadArgs) -> Result<()> {
     let default_shallow = config.defaults.shallow_clone;
     let default_depth = config.defaults.shallow_depth;
 
-    let repo_name = if looks_like_git_url(&args.name) {
-        let repo = add_repository(
-            &store,
-            &mut config,
-            &args.name,
-            None,
-            args.branch.clone(),
-            default_shallow,
-            Some(default_depth),
-        )?;
-        repo.name
-    } else {
-        store.resolve_repo(&config, &args.name)?.name.clone()
-    };
-
-    let mut repo = store.resolve_repo(&config, &repo_name)?.clone();
+    let mut repo = resolve_repo_for_load(
+        &store,
+        &mut config,
+        &args.name,
+        args.branch.clone(),
+        default_shallow,
+        default_depth,
+    )?;
     if let Some(branch) = &args.branch {
         if repo.branch.as_deref() != Some(branch.as_str()) {
             let progress = spinner(&format!("Switching {} to {branch}...", repo.name));
@@ -149,4 +141,47 @@ fn dir_gitignore_entry(path: &str) -> String {
 
 fn short_commit(commit: &str) -> &str {
     commit.get(..7).unwrap_or(commit)
+}
+
+fn resolve_repo_for_load(
+    store: &StateStore,
+    config: &mut ConfigFile,
+    input: &str,
+    branch: Option<String>,
+    shallow: bool,
+    depth: u32,
+) -> Result<RepoRecord> {
+    if let Ok(repo) = store.resolve_repo(config, input) {
+        return Ok(repo.clone());
+    }
+
+    let Some(url) = normalize_git_url(input) else {
+        return Err(GrfError::RepoNotFound {
+            name: input.to_string(),
+        });
+    };
+
+    if let Some(existing) = find_existing_repo_for_reference(store, config, &url)? {
+        return Ok(existing.clone());
+    }
+
+    add_repository(store, config, &url, None, branch, shallow, Some(depth))
+}
+
+fn find_existing_repo_for_reference<'a>(
+    store: &StateStore,
+    config: &'a ConfigFile,
+    url: &str,
+) -> Result<Option<&'a RepoRecord>> {
+    let parsed = parse_git_url(url)?;
+    let canonical_name = parsed.canonical_name();
+    if let Ok(repo) = store.resolve_repo(config, &canonical_name) {
+        return Ok(Some(repo));
+    }
+
+    let repo_path = build_repo_storage_path(store.paths(), &parsed);
+    Ok(config
+        .repos
+        .values()
+        .find(|repo| repo.url == url || repo.path == repo_path))
 }

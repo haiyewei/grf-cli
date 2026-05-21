@@ -17,8 +17,8 @@ impl GrfPaths {
             let root = to_utf8_path_buf(root_override.into())?;
             return Ok(Self {
                 repos_root: root.join("repos"),
-                config_path: root.join("config.json"),
-                loading_path: root.join("loading.json"),
+                config_path: root.join("config.v2.json"),
+                loading_path: root.join("loading.v2.json"),
                 root,
             });
         }
@@ -29,8 +29,8 @@ impl GrfPaths {
 
         Ok(Self {
             repos_root: root.join("repos"),
-            config_path: root.join("config.json"),
-            loading_path: root.join("loading.json"),
+            config_path: root.join("config.v2.json"),
+            loading_path: root.join("loading.v2.json"),
             root,
         })
     }

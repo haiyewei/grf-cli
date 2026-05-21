@@ -534,7 +534,7 @@ dependencies = [
 
 [[package]]
 name = "grf"
-version = "2.0.1"
+version = "2.0.2"
 dependencies = [
  "assert_cmd",
  "assert_fs",

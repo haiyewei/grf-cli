@@ -115,7 +115,7 @@ fn recover_existing_repository(
     })
 }
 
-fn build_repo_storage_path(
+pub(crate) fn build_repo_storage_path(
     paths: &GrfPaths,
     parsed: &crate::domain::git_url::ParsedGitUrl,
 ) -> Utf8PathBuf {

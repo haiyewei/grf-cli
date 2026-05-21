@@ -168,7 +168,7 @@ fn add_recovers_orphaned_cached_repo_and_allows_load() {
         .assert()
         .success();
 
-    let config_path = state_root.join("config.json");
+    let config_path = state_root.join("config.v2.json");
     let mut config: Value = serde_json::from_slice(&std::fs::read(&config_path).unwrap()).unwrap();
     config["repos"] = serde_json::json!({});
     std::fs::write(
@@ -188,6 +188,78 @@ fn add_recovers_orphaned_cached_repo_and_allows_load() {
         .assert()
         .success()
         .stdout(predicate::str::contains("Loaded github.com/openai/codex"));
+}
+
+#[test]
+fn new_state_files_ignore_legacy_json_names() {
+    let temp = TempDir::new().unwrap();
+    let state_root = temp.path().join("state");
+    let workspace = temp.path().join("workspace");
+    let source_repo = temp.path().join("source-repo");
+    std::fs::create_dir_all(&workspace).unwrap();
+    std::fs::create_dir_all(&state_root).unwrap();
+
+    write_file(
+        &state_root.join("config.json"),
+        "{\n  \"repos\": {\n    \"legacy\": {\"url\": \"x\"}\n  }\n}\n",
+    );
+    write_file(
+        &state_root.join("loading.json"),
+        "{\n  \"loadedRepos\": {}\n}\n",
+    );
+
+    init_git_repo(&source_repo);
+    write_file(&source_repo.join("README.md"), "hello from source\n");
+    git(&["add", "."], &source_repo);
+    git(&["commit", "-m", "initial"], &source_repo);
+
+    grf_cmd(&state_root, &workspace)
+        .args(["add", source_repo.to_str().unwrap(), "--name", "sample"])
+        .assert()
+        .success();
+
+    grf_cmd(&state_root, &workspace)
+        .args(["load", "sample", "vendor/reference"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Loaded sample"));
+
+    let config_v2 = state_root.join("config.v2.json");
+    let loading_v2 = state_root.join("loading.v2.json");
+    assert!(config_v2.exists());
+    assert!(loading_v2.exists());
+
+    let loading_json: Value = serde_json::from_slice(&std::fs::read(&loading_v2).unwrap()).unwrap();
+    assert_eq!(loading_json["version"], "2.0.0");
+    assert_eq!(loading_json["entries"].as_array().unwrap().len(), 1);
+
+    let legacy_loading = std::fs::read_to_string(state_root.join("loading.json")).unwrap();
+    assert!(legacy_loading.contains("\"loadedRepos\""));
+}
+
+#[test]
+fn load_uses_existing_cached_repo_when_given_local_path_again() {
+    let temp = TempDir::new().unwrap();
+    let state_root = temp.path().join("state");
+    let workspace = temp.path().join("workspace");
+    let source_repo = temp.path().join("source-repo");
+    std::fs::create_dir_all(&workspace).unwrap();
+
+    init_git_repo(&source_repo);
+    write_file(&source_repo.join("README.md"), "hello from source\n");
+    git(&["add", "."], &source_repo);
+    git(&["commit", "-m", "initial"], &source_repo);
+
+    grf_cmd(&state_root, &workspace)
+        .args(["add", source_repo.to_str().unwrap()])
+        .assert()
+        .success();
+
+    grf_cmd(&state_root, &workspace)
+        .args(["load", source_repo.to_str().unwrap(), "vendor/reference"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Loaded"));
 }
 
 fn init_git_repo(path: &Path) {
