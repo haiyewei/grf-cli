@@ -59,9 +59,10 @@ pub fn add_repository(
     }
 
     if repo_path.exists() {
-        return Err(GrfError::RepoAlreadyExists {
-            name: repo_name.clone(),
-        });
+        let repo = recover_existing_repository(url, repo_name.clone(), repo_path)?;
+        config.repos.insert(repo_name, repo.clone());
+        store.save_config(config)?;
+        return Ok(repo);
     }
 
     git::ensure_git_available()?;
@@ -91,6 +92,27 @@ pub fn add_repository(
     config.repos.insert(repo_name, repo.clone());
     store.save_config(config)?;
     Ok(repo)
+}
+
+fn recover_existing_repository(
+    url: &str,
+    repo_name: String,
+    repo_path: Utf8PathBuf,
+) -> Result<RepoRecord> {
+    git::ensure_git_available()?;
+    let commit_id = git::current_commit(&repo_path)?;
+    let branch = git::current_branch(&repo_path)?;
+    let now = OffsetDateTime::now_utc();
+
+    Ok(RepoRecord {
+        name: repo_name,
+        url: url.to_string(),
+        path: repo_path,
+        added_at: now,
+        updated_at: now,
+        commit_id,
+        branch,
+    })
 }
 
 fn build_repo_storage_path(

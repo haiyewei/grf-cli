@@ -148,6 +148,48 @@ fn update_sync_refreshes_workspace_from_local_remote() {
         .stdout(predicate::str::contains("in sync"));
 }
 
+#[test]
+fn add_recovers_orphaned_cached_repo_and_allows_load() {
+    let temp = TempDir::new().unwrap();
+    let state_root = temp.path().join("state");
+    let workspace = temp.path().join("workspace");
+    let source_repo = temp.path().join("source-repo");
+    std::fs::create_dir_all(&workspace).unwrap();
+
+    init_git_repo(&source_repo);
+    write_file(&source_repo.join("README.md"), "hello from source\n");
+    git(&["add", "."], &source_repo);
+    git(&["commit", "-m", "initial"], &source_repo);
+
+    let repo_name = "github.com/openai/codex";
+
+    grf_cmd(&state_root, &workspace)
+        .args(["add", source_repo.to_str().unwrap(), "--name", repo_name])
+        .assert()
+        .success();
+
+    let config_path = state_root.join("config.json");
+    let mut config: Value = serde_json::from_slice(&std::fs::read(&config_path).unwrap()).unwrap();
+    config["repos"] = serde_json::json!({});
+    std::fs::write(
+        &config_path,
+        format!("{}\n", serde_json::to_string_pretty(&config).unwrap()),
+    )
+    .unwrap();
+
+    grf_cmd(&state_root, &workspace)
+        .args(["add", source_repo.to_str().unwrap(), "--name", repo_name])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Added github.com/openai/codex"));
+
+    grf_cmd(&state_root, &workspace)
+        .args(["load", repo_name, "vendor/reference"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Loaded github.com/openai/codex"));
+}
+
 fn init_git_repo(path: &Path) {
     std::fs::create_dir_all(path).unwrap();
     git(&["init"], path);

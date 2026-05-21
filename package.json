@@ -1,6 +1,6 @@
 {
   "name": "grf-cli",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Rust-first CLI distribution for Git reference repositories, with npm only handling installation and upgrades.",
   "license": "MIT",
   "author": "haiyewei",
