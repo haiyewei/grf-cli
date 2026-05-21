@@ -1,42 +1,35 @@
 {
   "name": "grf-cli",
-  "version": "1.0.7",
-  "description": "A CLI tool for managing Git reference repositories - easily add, load, and sync reference code from any Git repository",
-  "main": "dist/cli.js",
-  "types": "dist/types/index.d.ts",
+  "version": "2.0.0",
+  "description": "Rust-first CLI distribution for Git reference repositories, with npm only handling installation and upgrades.",
+  "license": "MIT",
+  "author": "haiyewei",
+  "type": "commonjs",
   "bin": {
-    "grf": "./dist/cli.js",
-    "git-rf": "./dist/cli.js",
-    "gitref": "./dist/cli.js"
+    "grf": "./bin/grf.cjs",
+    "git-rf": "./bin/git-rf.cjs",
+    "gitref": "./bin/gitref.cjs"
   },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
-    "prepublishOnly": "npm run build",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "eslint src/",
-    "lint:fix": "eslint src/ --fix",
-    "format": "prettier --write \"src/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\"",
-    "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck && npm run lint && npm run format:check",
-    "check:fix": "npm run lint:fix && npm run format",
-    "knip": "knip",
-    "audit:check": "npm audit",
-    "audit:fix": "npm audit fix",
-    "prepare": "husky"
+    "build": "cargo build --release --locked",
+    "dev": "cargo run --",
+    "test": "cargo test --locked",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "format:check": "biome format --check .",
+    "check": "cargo fmt --check && cargo check --locked && pnpm run lint",
+    "postinstall": "node ./scripts/npm/postinstall.cjs",
+    "release:verify": "node ./scripts/npm/check-release-version.cjs",
+    "prepublishOnly": "pnpm run release:verify"
   },
   "keywords": [
     "git",
     "reference",
     "repository",
     "cli",
-    "code-reference",
-    "git-tools",
-    "developer-tools"
+    "rust"
   ],
-  "author": "haiyewei",
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/haiyewei/grf-cli.git"
@@ -46,34 +39,23 @@
     "url": "https://github.com/haiyewei/grf-cli/issues"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=18.18.0"
   },
-  "type": "commonjs",
+  "packageManager": "pnpm@10.33.2",
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
-    "dist",
+    "bin",
+    "scripts/npm",
+    "LICENSE",
     "README.md",
     "README.zh-CN.md"
   ],
-  "dependencies": {
-    "@inquirer/prompts": "^8.1.0",
-    "chalk": "^5.6.2",
-    "commander": "^14.0.2",
-    "fs-extra": "^11.3.3",
-    "ora": "^9.0.0"
+  "grf": {
+    "binaryName": "grf"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.2",
-    "@types/fs-extra": "^11.0.4",
-    "@types/inquirer": "^9.0.9",
-    "@types/node": "^25.0.3",
-    "eslint": "^9.39.2",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-import": "^2.32.0",
-    "husky": "^9.1.7",
-    "knip": "^5.79.0",
-    "lint-staged": "^16.2.7",
-    "prettier": "^3.7.4",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.51.0"
+    "@biomejs/biome": "^2.4.15"
   }
 }

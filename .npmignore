@@ -1,14 +1,15 @@
-# 源代码（已编译到 dist）
+# Rust 源码与构建产物
 src/
+target/
+Cargo.toml
+Cargo.lock
 
-# 设计文档
+# GitHub 工作流和设计文档
+.github/
 plans/
 
-# TypeScript 配置
-tsconfig.json
-
-# 开发依赖锁定文件
-package-lock.json
+# 锁定文件
+pnpm-lock.yaml
 
 # IDE 和编辑器配置
 .vscode/
@@ -27,17 +28,8 @@ coverage/
 .gitignore
 
 # 代码质量工具配置
-eslint.config.mjs
-.prettierrc
-.prettierignore
+biome.json
 .editorconfig
-.lintstagedrc.json
-knip.json
-.eslintcache
-.prettiercache
-
-# Husky Git Hooks
-.husky/
 
 # 其他
 .DS_Store
@@ -45,3 +37,4 @@ Thumbs.db
 *.log
 .env
 .env.*
+vendor/

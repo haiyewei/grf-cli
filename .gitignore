@@ -1,8 +1,10 @@
 # 依赖
 node_modules/
+vendor/
 
 # 构建输出
 dist/
+target/
 
 # IDE 和编辑器
 .vscode/
@@ -18,6 +20,7 @@ Thumbs.db
 # 日志
 *.log
 npm-debug.log*
+pnpm-debug.log*
 
 # 环境变量
 .env
@@ -33,8 +36,3 @@ coverage/
 # 开发目录
 dev/
 
-# ESLint 缓存
-.eslintcache
-
-# Prettier 缓存
-.prettiercache
