@@ -1,4 +1,4 @@
-name: Release and Publish
+name: Build and Release
 
 on:
   push:
@@ -145,32 +145,3 @@ jobs:
           files: dist/*
           generate_release_notes: true
           overwrite_files: true
-
-  publish:
-    needs:
-      - release
-      - verify
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          registry-url: "https://registry.npmjs.org"
-
-      - name: Enable pnpm via Corepack
-        run: corepack enable
-
-      - name: Install JavaScript dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
-
-      - name: Verify release version
-        run: node ./scripts/npm/check-release-version.cjs
-
-      - name: Publish package to npm
-        run: pnpm publish --no-git-checks
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

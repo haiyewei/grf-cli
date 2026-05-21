@@ -1,0 +1,49 @@
+name: Publish npm
+
+on:
+  workflow_run:
+    workflows:
+      - Build and Release
+    types:
+      - completed
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.id }}
+  cancel-in-progress: true
+
+env:
+  BIN_NAME: grf
+  CARGO_TERM_COLOR: always
+
+jobs:
+  publish:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && startsWith(github.event.workflow_run.head_branch, 'v') }}
+    runs-on: ubuntu-22.04
+    env:
+      GITHUB_REF_NAME: ${{ github.event.workflow_run.head_branch }}
+    steps:
+      - name: Checkout tagged release
+        uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ github.event.workflow_run.head_branch }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Enable pnpm via Corepack
+        run: corepack enable
+
+      - name: Install JavaScript dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Verify release version
+        run: node ./scripts/npm/check-release-version.cjs
+
+      - name: Publish package to npm
+        run: pnpm publish --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

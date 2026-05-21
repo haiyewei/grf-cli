@@ -56,8 +56,12 @@ The npm launcher will prefer the locally built Rust binary from
 
 ## Release flow
 
-The formal release workflow lives in
-[`publish.yml`](./.github/workflows/publish.yml).
+The formal release pipeline is split across:
+
+- [`publish.yml`](./.github/workflows/publish.yml) for version verification,
+  multi-platform native builds, and GitHub Release asset publishing
+- [`npm-publish.yml`](./.github/workflows/npm-publish.yml) for npm package
+  publishing after the first workflow finishes successfully
 
 Trigger:
 
@@ -71,13 +75,17 @@ Pipeline:
 2. Build `grf` for the configured targets.
 3. Publish binaries to the current GitHub repository release.
 4. Upload native binaries as release assets.
-5. Publish the npm installer package.
+5. Automatically trigger the npm publish workflow after the release workflow succeeds.
+6. Publish the npm installer package from the tagged ref.
 
 Repository secrets required by the workflow:
 
 - `NPM_TOKEN`
 
 The release upload uses the current repository's built-in `GITHUB_TOKEN`.
+If npm publishing is protected by 2FA, `NPM_TOKEN` must be allowed to bypass
+2FA for package publishing, or the repository must switch to npm Trusted
+Publishing.
 
 ## npm wrapper behavior
 

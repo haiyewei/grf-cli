@@ -54,8 +54,12 @@ pnpm run check
 
 ## 发布流程
 
-正式版本工作流位于
-[`publish.yml`](./.github/workflows/publish.yml)。
+正式版本发布现在拆成两个工作流：
+
+- [`publish.yml`](./.github/workflows/publish.yml)：负责版本校验、
+  多平台原生构建和 GitHub Release 资产发布
+- [`npm-publish.yml`](./.github/workflows/npm-publish.yml)：在前一个工作流
+  成功完成后，自动发布 npm 安装器包
 
 触发方式：
 
@@ -69,13 +73,16 @@ push tag: vX.Y.Z
 2. 为配置的平台目标构建 `grf`。
 3. 发布到当前 GitHub 仓库的 release。
 4. 上传原生二进制作为 release 资产。
-5. 发布 npm 安装器包。
+5. 第一个工作流成功后，自动触发 npm 发布工作流。
+6. 从当前 tag 对应的代码发布 npm 安装器包。
 
 工作流需要的仓库密钥：
 
 - `NPM_TOKEN`
 
 Release 上传使用当前仓库内建的 `GITHUB_TOKEN`。
+如果 npm 发布开启了 2FA 保护，那么 `NPM_TOKEN` 必须具备发布时绕过
+2FA 的能力，否则需要改成 npm Trusted Publishing。
 
 ## npm 安装器职责
 
